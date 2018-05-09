@@ -71,8 +71,10 @@ WirelessTagPlatform.prototype = {
                     
                     if (emulateThermostat) {
                         // Supplement additional config data
-                        wirelesstags.loadTempSensorConfig(device.slaveId, this.token, function (sensorConfig) {
-                            if (!sensorConfig) {
+                        wirelesstags.loadTempSensorConfig(device.slaveId, that.token, function (sensorConfig) {
+                            if (sensorConfig) {
+                                config = sensorConfig;
+                            } else {
                                 that.log("loadTempSensorConfig - error getting tag config for " + device.uuid);
                             }
                             checkDevice();
@@ -123,7 +125,8 @@ let test = new WirelessTagPlatform(console.log,         {
     "token": "3a9abee5-67bc-4733-b2e6-cf5c3ff09202",
     "queryFrequency": 20000,
     "motionSensors": [],
-    "contactSensors": []
+    "contactSensors": [],
+    "emulateThermostats": ["Bedroom"]
 });
 test.accessories(a => console.log(a));
 
