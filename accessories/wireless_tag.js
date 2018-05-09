@@ -22,8 +22,9 @@ module.exports = function(oAccessory, oService, oCharacteristic) {
 };
 module.exports.WirelessTagAccessory = WirelessTagAccessory;
 
-function WirelessTagAccessory(platform, device) {
+function WirelessTagAccessory(platform, device, behaviour) {
     this.platform = platform;
+    this.behaviour = behaviour;
     this.log = platform.log;
     this.device = device;
     this.name = device.name;
@@ -34,7 +35,7 @@ function WirelessTagAccessory(platform, device) {
     var that = this;
     
     // Motion
-    if (platform.motionSensors.indexOf(that.device.name) >= 0) {
+    if (that.behaviour.motionSensor) {
         this.addService(Service.MotionSensor)
             .getCharacteristic(Characteristic.MotionDetected)
             .on('get', function(callback) {
@@ -43,7 +44,7 @@ function WirelessTagAccessory(platform, device) {
     }
     
     // Contact
-    if (platform.contactSensors.indexOf(that.device.name) >= 0) {
+    if (that.behaviour.contactSensor) {
         this.addService(Service.ContactSensor)
             .getCharacteristic(Characteristic.ContactSensorState)
             .on('get', function(callback) {
@@ -56,24 +57,59 @@ function WirelessTagAccessory(platform, device) {
                     
         });
     }
+
+    // Thermostat - will be used for temperature and humidity if set
+    let thermostat;
+    if (that.behaviour.emulateThermostat) {
+        thermostat = this.addService(Service.Thermostat);
+        thermostat.getCharacteristic(Characteristic.CurrentHeatingCoolingState)
+            .on('get', function (callback) {
+                callback(null, Characteristic.CurrentHeatingCoolingState.OFF);
+            });
+        thermostat.getCharacteristic(Characteristic.TargetHeatingCoolingState)
+            .on('get', function (callback) {
+                let value = {
+                    1: Characteristic.TargetHeatingCoolingState.OFF,
+                    2: Characteristic.TargetHeatingCoolingState.HEAT,
+                    3: Characteristic.TargetHeatingCoolingState.COOL
+                }[that.device.tempEventState] || Characteristic.TargetHeatingCoolingState.OFF;
+                callback(null, value);
+            });
+        thermostat.getCharacteristic(Characteristic.TargetTemperature)
+            .on('get', function (callback) {
+                callback(null, that.device.temperature);
+            });
+        thermostat.getCharacteristic(Characteristic.TemperatureDisplayUnits)
+            .on('get', function (callback) {
+                callback(null, that.config.temp_unit ? Characteristic.TemperatureDisplayUnits.FAHRENHEIT : Characteristic.TemperatureDisplayUnits.CELSIUS)
+            });
+        thermostat.getCharacteristic(Characteristic.CoolingThresholdTemperature)
+            .on('get', function (callback) {
+                callback(null, that.config.th_low);
+            });
+        thermostat.getCharacteristic(Characteristic.HeatingThresholdTemperature)
+            .on('get', function (callback) {
+                callback(null, that.config.th_high);
+            });
+    }
     
     // Temperature
-    this.addService(Service.TemperatureSensor)
+    (thermostat || this.addService(Service.TemperatureSensor))
         .getCharacteristic(Characteristic.CurrentTemperature)
         .setProps({
             minValue: -100,
             maxValue: 100
         })
         .on('get', function(callback) {
-        callback(null, that.device.temperature);
-    });
+            callback(null, that.device.temperature);
+        });
 
     // Humidity
-    this.addService(Service.HumiditySensor)
+    (thermostat || this.addService(Service.HumiditySensor))
         .getCharacteristic(Characteristic.CurrentRelativeHumidity)
         .on('get', function(callback) {
-        callback(null, that.device.cap !== undefined ? Math.round(that.device.cap) : 0.0);
-    });
+            callback(null, that.device.cap !== undefined ? Math.round(that.device.cap) : 0.0);
+        });
 
     // Battery
     this.addService(Service.BatteryService)
@@ -103,26 +139,44 @@ var getServices = function() {
 
 var loadData = function() {
     // Motion
-    if (this.platform.motionSensors.indexOf(this.name) >= 0) {
+    if (this.behaviour.motionSensor) {
         this.getService(Service.MotionSensor)
             .getCharacteristic(Characteristic.MotionDetected)
             .getValue();
     }
     
     // Contact
-    if (this.platform.contactSensors.indexOf(this.name) >= 0) {
+    if (this.behaviour.contactSensor) {
         this.getService(Service.ContactSensor)
             .getCharacteristic(Characteristic.ContactSensorState)
             .getValue();
     }
+
+    // Thermostat
+    let thermostat;
+    if (that.behaviour.emulateThermostat) {
+        thermostat = this.addService(Service.Thermostat);
+        thermostat.getCharacteristic(Characteristic.CurrentHeatingCoolingState)
+            .getValue();
+        thermostat.getCharacteristic(Characteristic.TargetHeatingCoolingState)
+            .getValue();
+        thermostat.getCharacteristic(Characteristic.TargetTemperature)
+            .getValue();
+        thermostat.getCharacteristic(Characteristic.TemperatureDisplayUnits)
+            .getValue();
+        thermostat.getCharacteristic(Characteristic.CoolingThresholdTemperature)
+            .getValue();
+        thermostat.getCharacteristic(Characteristic.HeatingThresholdTemperature)
+            .getValue();
+    }    
     
     // Temperature
-    this.getService(Service.TemperatureSensor)
+    (thermostat || this.getService(Service.TemperatureSensor))
         .getCharacteristic(Characteristic.CurrentTemperature)
         .getValue();
 
     // Humidity
-    this.getService(Service.HumiditySensor)
+    (thermostat || this.getService(Service.HumiditySensor))
         .getCharacteristic(Characteristic.CurrentRelativeHumidity)
         .getValue();
 

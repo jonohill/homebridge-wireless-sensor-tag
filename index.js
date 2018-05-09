@@ -22,6 +22,7 @@ function WirelessTagPlatform(log, config) {
     this.log = log;
     this.motionSensors = (config.motionSensors == undefined) ? [] : config.motionSensors;
     this.contactSensors = (config.contactSensors == undefined) ? [] : config.contactSensors;
+    this.emulateThermostats = (config.emulateThermostats == undefined) ? [] : config.emulateThermostats;
 }
 
 WirelessTagPlatform.prototype = {
@@ -39,10 +40,26 @@ WirelessTagPlatform.prototype = {
                     if (that.deviceLookup[device.uuid]) {
                         accessory = that.deviceLookup[device.uuid];
                         accessory.device = device;
-                        accessory.loadData(device);
+                        if (accessory.emulateThermostat) {
+                            // Supplement additional config data
+                            wirelesstags.loadTempSensorConfig(device.slaveId, token, function (sensorConfig) {
+                                if (sensorConfig) {
+                                    accessory.config = sensorConfig;
+                                    accessory.loadData();
+                                } else {
+                                    that.log("loadTempSensorConfig - error getting tag config for " + device.uuid);
+                                }
+                            });
+                        } else {
+                            accessory.loadData();
+                        }
                     }
                     else {
-                        accessory = new WirelessTagAccessory(that, device);
+                        accessory = new WirelessTagAccessory(that, device, {
+                            motionSensor: that.motionSensors.indexOf(device.name) >= 0,
+                            contactSensor: that.contactSensors.indexOf(device.name) >= 0,
+                            emulateThermostat: that.contactSensors.indexOf(device.name) >= 0
+                        });
 
                         // Device successfully added
                         if (accessory !== undefined) {
