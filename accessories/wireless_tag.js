@@ -154,8 +154,8 @@ var loadData = function() {
 
     // Thermostat
     let thermostat;
-    if (that.behaviour.emulateThermostat) {
-        thermostat = this.addService(Service.Thermostat);
+    if (this.behaviour.emulateThermostat) {
+        thermostat = this.getService(Service.Thermostat);
         thermostat.getCharacteristic(Characteristic.CurrentHeatingCoolingState)
             .getValue();
         thermostat.getCharacteristic(Characteristic.TargetHeatingCoolingState)
