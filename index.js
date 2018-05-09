@@ -43,11 +43,8 @@ WirelessTagPlatform.prototype = {
                         if (that.deviceLookup[device.uuid]) {
                             accessory = that.deviceLookup[device.uuid];
                             accessory.device = device;
-                            if (emulateThermostat) {
-                                accessory.config = config;
-                            } else {
-                                accessory.loadData();
-                            }
+                            accessory.config = config;
+                            accessory.loadData();
                         }
                         else {
                             accessory = new WirelessTagAccessory(that, device, config, {
@@ -117,16 +114,3 @@ WirelessTagPlatform.prototype = {
         }
     }
 };
-
-WirelessTagAccessory = require('./accessories/wireless_tag')(Accessory, Service, Characteristic);
-let test = new WirelessTagPlatform(console.log,         {
-    "platform": "wireless-sensor-tag",
-    "name": "wireless-sensor-tag",
-    "token": "3a9abee5-67bc-4733-b2e6-cf5c3ff09202",
-    "queryFrequency": 20000,
-    "motionSensors": [],
-    "contactSensors": [],
-    "emulateThermostats": ["Bedroom"]
-});
-test.accessories(a => console.log(a));
-
