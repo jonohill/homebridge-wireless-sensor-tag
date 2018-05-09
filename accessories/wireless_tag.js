@@ -22,11 +22,12 @@ module.exports = function(oAccessory, oService, oCharacteristic) {
 };
 module.exports.WirelessTagAccessory = WirelessTagAccessory;
 
-function WirelessTagAccessory(platform, device, behaviour) {
+function WirelessTagAccessory(platform, device, config, behaviour) {
     this.platform = platform;
     this.behaviour = behaviour;
     this.log = platform.log;
     this.device = device;
+    this.config = config;
     this.name = device.name;
     this.uuid = device.uuid;
     this.uuid_base = this.uuid;

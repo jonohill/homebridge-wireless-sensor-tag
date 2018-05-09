@@ -34,44 +34,54 @@ WirelessTagPlatform.prototype = {
             if (devices && devices instanceof Array) {
                 for (var i = 0; i < devices.length; i++) {
                     var device = devices[i];
+                    var config = {};
                     var accessory = undefined;
+                    var emulateThermostat = that.emulateThermostats.indexOf(device.name) >= 0;
 
-                    // Device already added, so just load data
-                    if (that.deviceLookup[device.uuid]) {
-                        accessory = that.deviceLookup[device.uuid];
-                        accessory.device = device;
-                        if (accessory.emulateThermostat) {
-                            // Supplement additional config data
-                            wirelesstags.loadTempSensorConfig(device.slaveId, token, function (sensorConfig) {
-                                if (sensorConfig) {
-                                    accessory.config = sensorConfig;
-                                    accessory.loadData();
-                                } else {
-                                    that.log("loadTempSensorConfig - error getting tag config for " + device.uuid);
-                                }
-                            });
-                        } else {
-                            accessory.loadData();
+                    var checkDevice = function () {
+                        // Device already added, so just load data
+                        if (that.deviceLookup[device.uuid]) {
+                            accessory = that.deviceLookup[device.uuid];
+                            accessory.device = device;
+                            if (emulateThermostat) {
+                                accessory.config = config;
+                            } else {
+                                accessory.loadData();
+                            }
                         }
-                    }
-                    else {
-                        accessory = new WirelessTagAccessory(that, device, {
-                            motionSensor: that.motionSensors.indexOf(device.name) >= 0,
-                            contactSensor: that.contactSensors.indexOf(device.name) >= 0,
-                            emulateThermostat: that.emulateThermostats.indexOf(device.name) >= 0
-                        });
-
-                        // Device successfully added
-                        if (accessory !== undefined) {
-                            that.log("Device added - " + device.uuid);
-                            that.deviceLookup[device.uuid] = accessory;
-                            foundAccessories.push(accessory);
-                        }
-                        // Unknown device - skip
                         else {
-                            that.log("Device skipped - " + device.uuid);
+                            accessory = new WirelessTagAccessory(that, device, config, {
+                                motionSensor: that.motionSensors.indexOf(device.name) >= 0,
+                                contactSensor: that.contactSensors.indexOf(device.name) >= 0,
+                                emulateThermostat: emulateThermostat
+                            });
+
+                            // Device successfully added
+                            if (accessory !== undefined) {
+                                that.log("Device added - " + device.uuid);
+                                that.deviceLookup[device.uuid] = accessory;
+                                foundAccessories.push(accessory);
+                            }
+                            // Unknown device - skip
+                            else {
+                                that.log("Device skipped - " + device.uuid);
+                            }
                         }
                     }
+                    
+                    if (emulateThermostat) {
+                        // Supplement additional config data
+                        wirelesstags.loadTempSensorConfig(device.slaveId, this.token, function (sensorConfig) {
+                            if (!sensorConfig) {
+                                that.log("loadTempSensorConfig - error getting tag config for " + device.uuid);
+                            }
+                            checkDevice();
+                        });
+                    } else {
+                        checkDevice();
+                    }
+
+
                 }
                 
                 if (callback) {
