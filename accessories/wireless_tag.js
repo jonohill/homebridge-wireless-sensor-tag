@@ -1,6 +1,7 @@
 var inherits = require('util').inherits;
 var EventState = require('../lib/event_state');
 var LightState = require('../lib/light_state');
+var TemperatureState = require('../lib/temperature_state');
 
 var Accessory, Service, Characteristic, uuid;
 
@@ -69,16 +70,34 @@ function WirelessTagAccessory(platform, device, config, behaviour) {
             });
         thermostat.getCharacteristic(Characteristic.TargetHeatingCoolingState)
             .on('get', function (callback) {
-                let value = {
-                    1: Characteristic.TargetHeatingCoolingState.OFF,
-                    2: Characteristic.TargetHeatingCoolingState.HEAT,
-                    3: Characteristic.TargetHeatingCoolingState.COOL
-                }[that.device.tempEventState] || Characteristic.TargetHeatingCoolingState.OFF;
+                let value = Characteristic.TargetHeatingCoolingState.OFF;
+                switch (that.device.tempEventState) {
+                    case TemperatureState.NORMAL:
+                        value = Characteristic.TargetHeatingCoolingState.OFF;
+                        break;
+                    case TemperatureState.TOO_HIGH:
+                        value = Characteristic.TargetHeatingCoolingState.COOL;
+                        break;
+                    case TemperatureState.TOO_LOW:
+                        value = Characteristic.TargetHeatingCoolingState.HEAT;
+                        break;
+                }
+
                 callback(null, value);
             });
         thermostat.getCharacteristic(Characteristic.TargetTemperature)
             .on('get', function (callback) {
-                callback(null, that.device.temperature);
+                let value = that.device.temperature;
+                switch (that.device.tempEventState) {
+                    case TemperatureState.TOO_HIGH:
+                        value = that.config.th_high;
+                        break;
+                    case TemperatureState.TOO_LOW:
+                        value = that.config.th_low;
+                        break;
+                }
+
+                callback(null, value);
             });
         thermostat.getCharacteristic(Characteristic.TemperatureDisplayUnits)
             .on('get', function (callback) {
