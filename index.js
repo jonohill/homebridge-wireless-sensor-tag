@@ -31,7 +31,7 @@ WirelessTagPlatform.prototype = {
         
         (async function() {
             var foundAccessories = [];
-            let devices = await wirelesstags.getTagList(this.token);
+            let devices = await wirelesstags.getTagList(that.token);
             if (devices && devices instanceof Array) {
                 for (var i = 0; i < devices.length; i++) {
                     var device = devices[i];
